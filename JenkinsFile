@@ -1,0 +1,46 @@
+pipeline {
+    agent any 
+
+    triggers {
+        cron('H/5 * * * 1')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh './mvnw clean compile'
+            }
+        }
+
+        stage('Test & Coverage') {
+            steps {
+                sh './mvnw test jacoco:report'
+            }
+        }
+
+        stage('Package Artifact') {
+            steps {
+                sh './mvnw package -DskipTests'
+            }
+        }
+    }
+
+    post {
+        always {
+            junit 'target/surefire-reports/*.xml'
+            jacoco execPattern: 'target/jacoco.exec', 
+                   classPattern: 'target/classes', 
+                   sourcePattern: 'src/main/java', 
+                   inclusionPattern: '**/*.class'
+        }
+        success {
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
+    }
+}
